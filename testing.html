@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LumePilot</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js"></script>
+    <style>
+        /* Base Styles & Font */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background-color: #4a5568; /* dark-gray-400 */
+            border-radius: 20px;
+            border: 3px solid transparent;
+        }
+        .dark ::-webkit-scrollbar-thumb {
+            background-color: #a0aec0; /* dark-gray-600 */
+        }
+        
+        /* Smooth Transitions */
+        body, .transition-colors {
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* Modal Styling */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed;
+            z-index: 50;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
+            -webkit-backdrop-filter: blur(5px);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            position: relative;
+            margin: 10% auto;
+            padding: 2rem;
+            width: 90%;
+            max-width: 500px;
+        }
+        
+        /* Typing indicator animation */
+        .typing-indicator span {
+            height: 10px;
+            width: 10px;
+            background-color: #9ca3af;
+            border-radius: 50%;
+            display: inline-block;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+        .dark .typing-indicator span {
+            background-color: #6b7280;
+        }
+        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1.0); }
+        }
+
+        /* Code block styling */
+        pre {
+            position: relative;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            padding-top: 2.5rem; /* Space for the header */
+            overflow-x: auto;
+        }
+        .code-header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            border-bottom-width: 1px;
+            font-size: 0.875rem;
+            border-radius: 0.5rem 0.5rem 0 0;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
+
+    <div id="app-container" class="flex flex-col h-screen">
+
+        <!-- Header -->
+        <header class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 transition-colors">
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-white">LumePilot</h1>
+            <div class="flex items-center space-x-4">
+                <button id="save-chat-btn" title="Save Chat" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                </button>
+                <button id="settings-btn" title="Model Settings" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                </button>
+                <button id="theme-switcher" title="Toggle Theme" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                    <svg id="theme-icon-light" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                    <svg id="theme-icon-dark" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Chat Area -->
+        <main id="chat-area" class="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
+            <!-- Chat messages will be appended here -->
+             <div class="p-4 rounded-lg bg-white dark:bg-gray-800 shadow-md max-w-3xl mx-auto">
+                <div class="flex items-start space-x-4">
+                    <span class="flex-shrink-0 h-8 w-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold">AI</span>
+                    <div class="flex-1">
+                        <p class="font-semibold text-gray-900 dark:text-white">LumePilot</p>
+                        <div class="prose prose-sm max-w-none text-gray-700 dark:text-gray-300">
+                            <p>Hello! I'm LumePilot. To get started, please configure a model in the settings.</p>
+                            <p>Click the <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg> icon in the top right to add your API keys and create model nicknames.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Input Area -->
+        <footer class="p-4 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 transition-colors">
+            <div class="max-w-3xl mx-auto">
+                <form id="chat-form" class="flex items-center space-x-2">
+                    <select id="model-selector" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-48 p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
+                        <!-- Models will be populated here -->
+                    </select>
+                    <input type="text" id="message-input" placeholder="Ask LumePilot..." class="flex-1 p-2.5 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" required>
+                    <button type="submit" class="bg-blue-600 text-white p-2.5 rounded-lg hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-300 dark:bg-blue-500 dark:hover:bg-blue-600 dark:focus:ring-blue-800">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
+                    </button>
+                </form>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal">
+        <div class="modal-content bg-white dark:bg-gray-800 rounded-lg shadow-xl">
+            <div class="flex justify-between items-center pb-4 mb-4 border-b border-gray-200 dark:border-gray-600">
+                <h3 class="text-xl font-semibold">Model Settings</h3>
+                <button id="close-modal-btn" class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center dark:hover:bg-gray-600 dark:hover:text-white">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
+                </button>
+            </div>
+            <!-- Form to add a new model -->
+            <form id="model-form" class="space-y-4">
+                <div>
+                    <label for="model-nickname" class="block mb-2 text-sm font-medium">Model Nickname</label>
+                    <input type="text" id="model-nickname" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" placeholder="e.g., My Fast Model" required>
+                </div>
+                <div>
+                    <label for="model-id" class="block mb-2 text-sm font-medium">Model ID</label>
+                    <input type="text" id="model-id" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" placeholder="e.g., gemini-1.5-flash-latest" required>
+                </div>
+                <div>
+                    <label for="api-key" class="block mb-2 text-sm font-medium">API Key</label>
+                    <input type="password" id="api-key" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" required>
+                </div>
+                <button type="submit" class="w-full text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-500 dark:hover:bg-blue-600">Add Model</button>
+            </form>
+            <!-- List of saved models -->
+            <div id="saved-models-list" class="mt-6">
+                <h4 class="text-lg font-semibold mb-2">Saved Models</h4>
+                <div id="models-container" class="space-y-2 max-h-40 overflow-y-auto">
+                    <!-- Saved models will be listed here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- DOM Elements ---
+            const themeSwitcher = document.getElementById('theme-switcher');
+            const themeIconLight = document.getElementById('theme-icon-light');
+            const themeIconDark = document.getElementById('theme-icon-dark');
+            const chatForm = document.getElementById('chat-form');
+            const messageInput = document.getElementById('message-input');
+            const chatArea = document.getElementById('chat-area');
+            const modelSelector = document.getElementById('model-selector');
+            const settingsBtn = document.getElementById('settings-btn');
+            const closeModalBtn = document.getElementById('close-modal-btn');
+            const settingsModal = document.getElementById('settings-modal');
+            const modelForm = document.getElementById('model-form');
+            const modelsContainer = document.getElementById('models-container');
+            const saveChatBtn = document.getElementById('save-chat-btn');
+
+            // --- State & Config ---
+            let models = JSON.parse(localStorage.getItem('llm_models')) || [];
+            const markdownConverter = new showdown.Converter({
+                ghCompatibleHeaderId: true,
+                simpleLineBreaks: true,
+                simplifiedAutoLink: true,
+                strikethrough: true,
+                tables: true,
+                tasklists: true,
+                openLinksInNewWindow: true,
+                emoji: true,
+                underline: true
+            });
+
+            // --- Theme Management ---
+            const applyTheme = (theme) => {
+                if (theme === 'dark') {
+                    document.documentElement.classList.add('dark');
+                    themeIconLight.classList.add('hidden');
+                    themeIconDark.classList.remove('hidden');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                    themeIconLight.classList.remove('hidden');
+                    themeIconDark.classList.add('hidden');
+                }
+                localStorage.setItem('theme', theme);
+            };
+
+            themeSwitcher.addEventListener('click', () => {
+                const newTheme = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
+                applyTheme(newTheme);
+            });
+            
+            // Apply saved theme on load
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            applyTheme(savedTheme);
+
+            // --- Model & Settings Management ---
+            const populateModels = () => {
+                modelSelector.innerHTML = '';
+                modelsContainer.innerHTML = '';
+
+                if (models.length === 0) {
+                    modelSelector.innerHTML = '<option disabled selected>No models configured</option>';
+                    modelsContainer.innerHTML = '<p class="text-sm text-gray-500 dark:text-gray-400">No models saved yet. Add one above.</p>';
+                } else {
+                    models.forEach((model, index) => {
+                        // Populate dropdown
+                        const option = document.createElement('option');
+                        option.value = index;
+                        option.textContent = model.nickname;
+                        modelSelector.appendChild(option);
+
+                        // Populate settings list
+                        const modelDiv = document.createElement('div');
+                        modelDiv.className = 'flex justify-between items-center p-2 bg-gray-100 dark:bg-gray-700 rounded-md';
+                        modelDiv.innerHTML = `
+                            <span class="font-medium">${model.nickname}</span>
+                            <button data-index="${index}" class="delete-model-btn text-red-500 hover:text-red-700 p-1 rounded-full">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            </button>
+                        `;
+                        modelsContainer.appendChild(modelDiv);
+                    });
+                }
+            };
+
+            const saveModels = () => {
+                localStorage.setItem('llm_models', JSON.stringify(models));
+                populateModels();
+            };
+
+            modelForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const newModel = {
+                    nickname: document.getElementById('model-nickname').value,
+                    id: document.getElementById('model-id').value,
+                    apiKey: document.getElementById('api-key').value,
+                };
+                models.push(newModel);
+                saveModels();
+                modelForm.reset();
+            });
+
+            modelsContainer.addEventListener('click', (e) => {
+                if (e.target.closest('.delete-model-btn')) {
+                    const index = e.target.closest('.delete-model-btn').dataset.index;
+                    models.splice(index, 1);
+                    saveModels();
+                }
+            });
+
+            // --- Modal Logic ---
+            settingsBtn.addEventListener('click', () => settingsModal.style.display = 'block');
+            closeModalBtn.addEventListener('click', () => settingsModal.style.display = 'none');
+            window.addEventListener('click', (e) => {
+                if (e.target === settingsModal) {
+                    settingsModal.style.display = 'none';
+                }
+            });
+            
+            // --- Chat Logic ---
+            const addMessageToUI = (sender, message, isHtml = false) => {
+                const messageId = `msg-${Date.now()}`;
+                const messageElement = document.createElement('div');
+                messageElement.id = messageId;
+                messageElement.className = 'p-4 rounded-lg bg-white dark:bg-gray-800 shadow-md max-w-3xl mx-auto';
+                
+                const senderIcon = sender === 'user' 
+                    ? `<span class="flex-shrink-0 h-8 w-8 rounded-full bg-gray-600 dark:bg-gray-500 text-white flex items-center justify-center font-bold">U</span>`
+                    : `<span class="flex-shrink-0 h-8 w-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold">AI</span>`;
+                
+                const senderName = sender === 'user' ? 'You' : 'LumePilot';
+
+                let messageContent;
+                if (sender === 'typing') {
+                     messageContent = `
+                        <div class="typing-indicator">
+                            <span></span><span></span><span></span>
+                        </div>`;
+                } else {
+                    messageContent = isHtml ? message : `<p>${message.replace(/\n/g, '<br>')}</p>`;
+                }
+                
+                messageElement.innerHTML = `
+                    <div class="flex items-start space-x-4">
+                        ${senderIcon}
+                        <div class="flex-1 overflow-x-auto">
+                            <p class="font-semibold text-gray-900 dark:text-white">${senderName}</p>
+                            <div class="prose prose-sm max-w-none text-gray-700 dark:text-gray-300 dark:prose-invert">
+                                ${messageContent}
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                chatArea.appendChild(messageElement);
+                chatArea.scrollTop = chatArea.scrollHeight;
+                return messageId;
+            };
+
+            const updateMessageInUI = (messageId, newContent) => {
+                const messageElement = document.getElementById(messageId);
+                if (messageElement) {
+                    const contentDiv = messageElement.querySelector('.prose');
+                    contentDiv.innerHTML = newContent;
+                    
+                    // Add copy buttons to new code blocks
+                    contentDiv.querySelectorAll('pre').forEach(pre => {
+                        if (pre.querySelector('.copy-code-btn')) return; // Already has a button
+
+                        const code = pre.querySelector('code');
+                        const langMatch = code.className.match(/language-(\S+)/);
+                        const lang = langMatch ? langMatch[1] : 'code';
+
+                        const header = document.createElement('div');
+                        header.className = 'code-header bg-gray-200 dark:bg-gray-700 border-b border-gray-300 dark:border-gray-600';
+
+                        const langSpan = document.createElement('span');
+                        langSpan.textContent = lang;
+                        
+                        const copyBtn = document.createElement('button');
+                        copyBtn.className = 'copy-code-btn flex items-center space-x-1 text-xs hover:text-blue-500';
+                        copyBtn.innerHTML = `
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                            <span>Copy</span>`;
+                        
+                        copyBtn.onclick = () => {
+                            navigator.clipboard.writeText(code.innerText).then(() => {
+                                copyBtn.querySelector('span').textContent = 'Copied!';
+                                setTimeout(() => {
+                                    copyBtn.querySelector('span').textContent = 'Copy';
+                                }, 2000);
+                            });
+                        };
+
+                        header.appendChild(langSpan);
+                        header.appendChild(copyBtn);
+                        pre.prepend(header);
+                    });
+                }
+                 chatArea.scrollTop = chatArea.scrollHeight;
+            };
+
+            chatForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const userInput = messageInput.value.trim();
+                if (!userInput) return;
+
+                const selectedModelIndex = modelSelector.value;
+                if (selectedModelIndex === null || selectedModelIndex === 'No models configured') {
+                    addMessageToUI('ai', 'Please select a valid model from the settings first.', true);
+                    return;
+                }
+
+                const model = models[selectedModelIndex];
+                messageInput.value = '';
+
+                addMessageToUI('user', userInput);
+                const thinkingMessageId = addMessageToUI('typing', '');
+
+                try {
+                    const response = await callGeminiApi(userInput, model);
+                    const htmlResponse = markdownConverter.makeHtml(response);
+                    updateMessageInUI(thinkingMessageId, htmlResponse);
+                } catch (error) {
+                    console.error('API Error:', error);
+                    updateMessageInUI(thinkingMessageId, `<p class="text-red-500">Error: ${error.message}</p>`);
+                }
+            });
+
+            const callGeminiApi = async (prompt, modelConfig, retries = 3, delay = 1000) => {
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelConfig.id}:generateContent?key=${modelConfig.apiKey}`;
+                
+                const payload = {
+                    contents: [{ parts: [{ text: prompt }] }],
+                };
+
+                for (let i = 0; i < retries; i++) {
+                    try {
+                        const response = await fetch(apiUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload),
+                        });
+
+                        if (!response.ok) {
+                            const errorBody = await response.json();
+                            throw new Error(`API request failed with status ${response.status}: ${errorBody.error.message}`);
+                        }
+
+                        const result = await response.json();
+                        
+                        if (result.candidates && result.candidates.length > 0 &&
+                            result.candidates[0].content && result.candidates[0].content.parts &&
+                            result.candidates[0].content.parts.length > 0) {
+                            return result.candidates[0].content.parts[0].text;
+                        } else {
+                           throw new Error('Invalid response structure from API.');
+                        }
+
+                    } catch (error) {
+                        console.warn(`Attempt ${i + 1} failed. Retrying in ${delay / 1000}s...`);
+                        if (i === retries - 1) throw error; // Throw error on last attempt
+                        await new Promise(res => setTimeout(res, delay));
+                        delay *= 2; // Exponential backoff
+                    }
+                }
+            };
+            
+            // --- Save Chat Functionality ---
+            saveChatBtn.addEventListener('click', () => {
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                const filename = `LumePilot-Chat-${timestamp}.html`;
+
+                // Create a clone of the document to modify for saving
+                const savedDoc = document.cloneNode(true);
+
+                // Remove interactive elements that are not needed in the saved file
+                savedDoc.querySelector('#settings-modal').remove();
+                savedDoc.querySelector('script').remove(); // Remove the main script
+                savedDoc.querySelector('footer').remove(); // Remove input footer
+                
+                // Optional: remove buttons from header
+                savedDoc.getElementById('save-chat-btn').remove();
+                savedDoc.getElementById('settings-btn').remove();
+                savedDoc.getElementById('theme-switcher').remove();
+
+                // Remove delete buttons from saved models list if it was open
+                savedDoc.querySelectorAll('.delete-model-btn').forEach(btn => btn.remove());
+                // Remove copy buttons from code blocks
+                savedDoc.querySelectorAll('.copy-code-btn').forEach(btn => btn.remove());
+
+
+                const htmlContent = savedDoc.documentElement.outerHTML;
+                const blob = new Blob([htmlContent], { type: 'text/html' });
+                const url = URL.createObjectURL(blob);
+
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            });
+
+
+            // --- Initial Load ---
+            populateModels();
+        });
+    </script>
+</body>
+</html>
